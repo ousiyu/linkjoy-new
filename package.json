@@ -7,6 +7,12 @@
   "scripts": {
     "start": "node server.js"
   },
+  "nodemonConfig": {
+    "ignore": [
+      "data/*",
+      "data/**"
+    ]
+  },
   "engines": {
     "node": ">=18"
   }
