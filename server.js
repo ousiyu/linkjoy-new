@@ -8,6 +8,7 @@ const ROOT = __dirname;
 const PUBLIC = path.join(ROOT, "public");
 const DATA_DIR = process.env.DATA_DIR || path.join(ROOT, "data");
 const DB_FILE = path.join(DATA_DIR, "db.json");
+const ADMIN_ID = String(process.env.ADMIN_ID || "admin").trim().toLowerCase();
 
 const mime = {
   ".html": "text/html; charset=utf-8",
@@ -37,7 +38,7 @@ function ensureDb() {
   if (!fs.existsSync(DB_FILE)) {
     const now = Date.now();
     const admin = {
-      id: String(process.env.ADMIN_ID || "admin").trim().toLowerCase(),
+      id: ADMIN_ID,
       name: String(process.env.ADMIN_NAME || "站点管理员").trim(),
       passwordHash: hash(String(process.env.ADMIN_PASSWORD || "admin123")),
       role: "admin",
@@ -60,7 +61,22 @@ function ensureDb() {
 
 function loadDb() {
   ensureDb();
-  return JSON.parse(fs.readFileSync(DB_FILE, "utf8"));
+  const data = JSON.parse(fs.readFileSync(DB_FILE, "utf8"));
+  const adminId = ADMIN_ID;
+  const adminPassword = String(process.env.ADMIN_PASSWORD || "admin123");
+  const adminName = String(process.env.ADMIN_NAME || "站点管理员").trim();
+  let admin = data.users.find(u => u.id === adminId);
+  if (!admin) {
+    admin = { id: adminId, name: adminName, passwordHash: hash(adminPassword), role: "admin", friends: [], blocked: [], createdAt: Date.now() };
+    data.users.push(admin);
+  } else {
+    admin.role = "admin";
+    admin.name = admin.name || adminName;
+    admin.friends = Array.isArray(admin.friends) ? admin.friends : [];
+    admin.blocked = Array.isArray(admin.blocked) ? admin.blocked : [];
+  }
+  fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2));
+  return data;
 }
 
 let db = loadDb();
@@ -82,7 +98,7 @@ function publicUser(user) {
 }
 
 function selfUser(user) {
-  return { ...publicUser(user), role: user.role };
+  return { ...publicUser(user), role: user.role, canSeeOwnReadReceipts: user.role === "admin" || user.id === ADMIN_ID };
 }
 
 function getAuth(req) {
@@ -293,7 +309,8 @@ async function handleApi(req, res, url) {
       }
       const messages = db.messages.filter(m => m.conversationId === convId).map(m => ({
         ...m,
-        image: m.image || ""
+        image: m.image || "",
+        readAt: (me.role === "admin" || me.id === ADMIN_ID) ? m.readAt : undefined
       }));
       return json(res, 200, { messages });
     }
@@ -316,7 +333,7 @@ async function handleApi(req, res, url) {
       db.messages.push(msg);
       saveDb();
       broadcastUsers([me.id, target.id], "message", msg);
-      return json(res, 201, { message: { ...msg, readAt: undefined } });
+      return json(res, 201, { message: { ...msg, readAt: (me.role === "admin" || me.id === ADMIN_ID) ? null : undefined } });
     }
 
     if (req.method === "GET" && url.pathname === "/api/groups") {
@@ -345,6 +362,21 @@ async function handleApi(req, res, url) {
       saveDb();
       broadcastUsers(group.members, "groups", { id: group.id });
       return json(res, 201, { group });
+    }
+
+    if (req.method === "POST" && url.pathname.startsWith("/api/groups/") && url.pathname.endsWith("/members")) {
+      const groupId = url.pathname.split("/")[3];
+      const group = (db.groups || []).find(g => g.id === groupId && g.members.includes(me.id));
+      if (!group) return json(res, 404, { error: "群聊不存在" });
+      const body = await readBody(req);
+      const addIds = [...new Set((body.members || []).map(v => String(v).toLowerCase()))]
+        .filter(uid => me.friends.includes(uid))
+        .filter(uid => !group.members.includes(uid));
+      if (!addIds.length) return json(res, 400, { error: "请选择可邀请的好友" });
+      group.members.push(...addIds);
+      saveDb();
+      broadcastUsers(group.members, "groups", { id: group.id });
+      return json(res, 200, { group });
     }
 
     if (req.method === "GET" && url.pathname.startsWith("/api/groups/") && url.pathname.endsWith("/messages")) {
