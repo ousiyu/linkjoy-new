@@ -158,6 +158,7 @@ async function refreshMe() {
   $("#rolePill").textContent = "在线";
   renderFriends();
   renderRequests();
+  renderGroupFriendPicker();
 }
 
 function showView(view) {
@@ -203,12 +204,13 @@ function renderMessages() {
   const box = $("#messages");
   box.innerHTML = state.messages.map(m => {
     const mine = m.from === state.me.id;
+    const read = state.me.canSeeOwnReadReceipts && mine ? `<span class="read">${m.readAt ? "已读" : "未读"}</span>` : "";
     return `<div class="msg ${mine ? "mine" : ""}">
       <div class="bubble">
         ${m.text ? `<div>${escapeHtml(m.text)}</div>` : ""}
         ${m.image ? `<img class="chat-img" src="${m.image}" alt="聊天图片">` : ""}
       </div>
-      <div class="meta">${escapeHtml(m.from)} · ${fmt(m.createdAt)}</div>
+      <div class="meta">${escapeHtml(m.from)} · ${fmt(m.createdAt)} ${read}</div>
     </div>`;
   }).join("");
   box.scrollTop = box.scrollHeight;
@@ -243,11 +245,25 @@ function renderGroups() {
   $$("[data-group]").forEach(btn => btn.onclick = () => selectGroup(btn.dataset.group));
 }
 
+function renderGroupFriendPicker() {
+  const box = $("#groupFriendPicker");
+  if (!box) return;
+  box.innerHTML = state.friends.length ? `
+    <small>选择好友进群</small>
+    <div class="check-grid">
+      ${state.friends.map(f => `<label class="check-item"><input type="checkbox" value="${f.id}" data-group-member> ${escapeHtml(f.name)} <span>@${f.id}</span></label>`).join("")}
+    </div>` : "<p class='hint'>先添加好友，再创建群聊。</p>";
+}
+
+function selectedGroupMemberIds() {
+  return $$("[data-group-member]:checked").map(input => input.value);
+}
+
 async function createGroup() {
   const name = $("#groupName").value.trim();
-  const members = state.friends.map(f => f.id);
+  const members = selectedGroupMemberIds();
   if (!name) return toast("请输入群聊名称");
-  if (!members.length) return toast("先添加好友再建群");
+  if (!members.length) return toast("请选择至少一位好友");
   try {
     const { group } = await api("/api/groups", { method: "POST", body: JSON.stringify({ name, members }) });
     $("#groupName").value = "";
@@ -264,6 +280,19 @@ async function selectGroup(id) {
   await loadGroupMessages(id);
 }
 
+function groupInviteHtml() {
+  if (!state.selectedGroup) return "";
+  const memberIds = new Set(state.selectedGroup.members.map(m => m.id));
+  const candidates = state.friends.filter(f => !memberIds.has(f.id));
+  if (!candidates.length) return "<p class='hint'>没有可拉入的新好友。</p>";
+  return `<div class="invite-panel">
+    <small>拉好友进群</small>
+    <div class="actions">
+      ${candidates.map(f => `<button data-add-group-member="${f.id}">${escapeHtml(f.name)}</button>`).join("")}
+    </div>
+  </div>`;
+}
+
 async function loadGroupMessages(id) {
   const { messages } = await api(`/api/groups/${id}/messages`);
   state.groupMessages = messages;
@@ -272,7 +301,7 @@ async function loadGroupMessages(id) {
 
 function renderGroupMessages() {
   const box = $("#groupMessages");
-  box.innerHTML = state.groupMessages.map(m => {
+  box.innerHTML = `${groupInviteHtml()}${state.groupMessages.map(m => {
     const mine = m.from === state.me.id;
     return `<div class="msg ${mine ? "mine" : ""}">
       <div class="bubble">
@@ -281,8 +310,21 @@ function renderGroupMessages() {
       </div>
       <div class="meta">${escapeHtml(m.from)} · ${fmt(m.createdAt)}</div>
     </div>`;
-  }).join("");
+  }).join("")}`;
+  $$("[data-add-group-member]").forEach(btn => btn.onclick = () => addGroupMembers([btn.dataset.addGroupMember]));
   box.scrollTop = box.scrollHeight;
+}
+
+async function addGroupMembers(members) {
+  if (!state.selectedGroup) return;
+  try {
+    const { group } = await api(`/api/groups/${state.selectedGroup.id}/members`, { method: "POST", body: JSON.stringify({ members }) });
+    state.selectedGroup = { ...group, members: group.members.map(idOrUser => typeof idOrUser === "string" ? { id: idOrUser, name: idOrUser } : idOrUser) };
+    await loadGroups();
+    state.selectedGroup = state.groups.find(g => g.id === group.id) || state.selectedGroup;
+    await loadGroupMessages(group.id);
+    toast("已拉入群聊");
+  } catch (err) { toast(err.message); }
 }
 
 async function sendGroupMessage(e) {
