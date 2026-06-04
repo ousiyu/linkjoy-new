@@ -1,0 +1,13 @@
+{
+  "name": "social-chat-platform",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Web social IM platform with friend graph, admin-only read receipts, moments and multiplayer mini games.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>LinkJoy 即时社交</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <main id="app">
+    <section class="auth-screen" id="authScreen">
+      <div class="brand-panel">
+        <div class="brand-mark">LJ</div>
+        <h1>LinkJoy</h1>
+        <p>好友聊天、动态分享和多人小游戏，浏览器直接进入。</p>
+      </div>
+      <form class="auth-box" id="authForm">
+        <div class="tabs compact">
+          <button type="button" class="active" data-auth="login">登录</button>
+          <button type="button" data-auth="register">注册</button>
+        </div>
+        <label>ID<input id="authId" autocomplete="username" placeholder="例如 alice"></label>
+        <label id="nameRow" hidden>昵称<input id="authName" placeholder="你的显示名"></label>
+        <label>密码<input id="authPassword" type="password" autocomplete="current-password" placeholder="至少 6 位"></label>
+        <button class="primary" type="submit">进入</button>
+      </form>
+    </section>
+
+    <section class="shell hidden" id="mainShell">
+      <aside class="sidebar">
+        <div class="profile">
+          <div class="avatar" id="avatar">U</div>
+          <div>
+            <strong id="meName">用户</strong>
+            <span id="meId">@id</span>
+          </div>
+          <button class="icon-btn" id="logoutBtn" title="退出">↗</button>
+        </div>
+        <nav>
+          <button class="nav active" data-view="chat">聊天</button>
+          <button class="nav" data-view="friends">好友</button>
+          <button class="nav" data-view="groups">群聊</button>
+          <button class="nav" data-view="moments">空间</button>
+          <button class="nav" data-view="games">游戏</button>
+        </nav>
+        <div class="friend-list" id="friendList"></div>
+      </aside>
+
+      <section class="workspace">
+        <header class="topbar">
+          <div>
+            <h2 id="viewTitle">聊天</h2>
+            <p id="viewSub">选择好友开始对话</p>
+          </div>
+          <span class="role-pill" id="rolePill">在线</span>
+        </header>
+
+        <section class="view chat-view" id="chatView">
+          <div class="chat-head">
+            <strong id="chatTarget">未选择好友</strong>
+            <span id="chatNote">在线对话</span>
+          </div>
+          <div class="messages" id="messages"></div>
+          <form class="composer" id="messageForm">
+            <input id="messageInput" placeholder="输入文字消息" maxlength="1000">
+            <label class="file-btn">图片<input id="messageImage" type="file" accept="image/*" hidden></label>
+            <button class="primary" type="submit">发送</button>
+          </form>
+        </section>
+
+        <section class="view hidden" id="groupsView">
+          <div class="tools-row">
+            <input id="groupName" placeholder="群聊名称">
+            <button class="primary" id="createGroupBtn">建群</button>
+          </div>
+          <div class="two-col">
+            <div>
+              <h3>我的群聊</h3>
+              <div class="list" id="groupList"></div>
+            </div>
+            <div>
+              <div class="chat-head">
+                <strong id="groupTarget">未选择群聊</strong>
+                <span>群消息</span>
+              </div>
+              <div class="messages" id="groupMessages"></div>
+              <form class="composer" id="groupMessageForm">
+                <input id="groupMessageInput" placeholder="输入群消息" maxlength="1000">
+                <label class="file-btn">图片<input id="groupMessageImage" type="file" accept="image/*" hidden></label>
+                <button class="primary" type="submit">发送</button>
+              </form>
+            </div>
+          </div>
+        </section>
+
+        <section class="view hidden" id="friendsView">
+          <div class="tools-row">
+            <input id="searchInput" placeholder="输入用户 ID 或昵称检索">
+            <button class="primary" id="searchBtn">搜索</button>
+          </div>
+          <div class="two-col">
+            <div>
+              <h3>搜索结果</h3>
+              <div class="list" id="searchResults"></div>
+            </div>
+            <div>
+              <h3>好友申请</h3>
+              <div class="list" id="requests"></div>
+              <h3>黑名单</h3>
+              <div class="list" id="blockedList"></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="view hidden" id="momentsView">
+          <form class="moment-form" id="momentForm">
+            <textarea id="momentText" placeholder="分享近况" maxlength="500"></textarea>
+            <div class="tools-row">
+              <input id="momentImage" type="file" accept="image/*">
+              <button class="primary" type="submit">发布动态</button>
+            </div>
+          </form>
+          <div class="moments" id="moments"></div>
+        </section>
+
+        <section class="view hidden" id="gamesView">
+          <div class="tools-row">
+            <input id="roomName" placeholder="房间名称">
+            <select id="roomType">
+              <option value="drawguess">你画我猜</option>
+              <option value="bombcat">炸弹猫</option>
+              <option value="jumpchain">跳一跳接龙</option>
+            </select>
+            <button class="primary" id="createRoomBtn">开房</button>
+          </div>
+          <div class="game-layout">
+            <div>
+              <h3>房间</h3>
+              <div class="list" id="roomList"></div>
+            </div>
+            <div class="game-stage" id="gameStage"></div>
+          </div>
+        </section>
+      </section>
+    </section>
+  </main>
+  <div class="toast" id="toast"></div>
+  <script src="/app.js"></script>
+</body>
+</html>

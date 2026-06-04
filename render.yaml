@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: linkjoy
+    env: node
+    plan: free
+    buildCommand: ""
+    startCommand: "node server.js"
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATA_DIR
+        value: /opt/render/project/src/data
+      - key: ADMIN_ID
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: ADMIN_NAME
+        value: 站点账号
+    disk:
+      name: linkjoy-data
+      mountPath: /opt/render/project/src/data
+      sizeGB: 1
