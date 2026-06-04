@@ -59,9 +59,38 @@ function ensureDb() {
   }
 }
 
+function initialDb() {
+  const now = Date.now();
+  const admin = {
+    id: ADMIN_ID,
+    name: String(process.env.ADMIN_NAME || "站点管理员").trim(),
+    passwordHash: hash(String(process.env.ADMIN_PASSWORD || "admin123")),
+    role: "admin",
+    friends: [],
+    blocked: [],
+    createdAt: now
+  };
+  return {
+    users: [admin],
+    sessions: {},
+    friendRequests: [],
+    messages: [],
+    groups: [],
+    groupMessages: [],
+    moments: [],
+    rooms: []
+  };
+}
+
 function loadDb() {
   ensureDb();
-  const data = JSON.parse(fs.readFileSync(DB_FILE, "utf8"));
+  let data;
+  try {
+    const raw = fs.readFileSync(DB_FILE, "utf8").trim();
+    data = raw ? JSON.parse(raw) : initialDb();
+  } catch {
+    data = initialDb();
+  }
   const adminId = ADMIN_ID;
   const adminPassword = String(process.env.ADMIN_PASSWORD || "admin123");
   const adminName = String(process.env.ADMIN_NAME || "站点管理员").trim();
